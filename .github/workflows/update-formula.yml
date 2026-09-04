@@ -1,0 +1,33 @@
+name: Update formula
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Update formula from latest release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Regenerate formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/update-formula.sh
+      - name: Commit and push
+        run: |
+          if git diff --quiet; then
+            echo "formula is up to date, nothing to commit"
+            exit 0
+          fi
+          version=$(sed -n 's/^[[:space:]]*version "\([0-9.]*\)"$/\1/p' Formula/weeek.rb)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/weeek.rb
+          git commit -m "chore: sync formula with v$version"
+          git push
